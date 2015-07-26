@@ -11,11 +11,18 @@
 #include<unordered_map>
 #include<pair>
 
+// Polar coordinates for a point
+struct PolarCoordinates {
+    double _r;
+    Angle _angle;
+};
+
+
 // Stores a point as cartesian coordinates and normal vector as angle
 class RobotMapPoint {
 public:
-    RobotMapPoint(double x, double y, const Angle & t);
-    RobotMapPoint(double r, const Angle & t, const RobotMapPoint & location);
+    RobotMapPoint(double x, double y, const Angle & normal);
+    RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMapPoint & location);
     
     double getX();
     double getY();
@@ -26,7 +33,7 @@ private:
     double _x, _y;
     
     // Angle representing normal vector
-    Angle _t;
+    Angle _normal;
 };
 
 
@@ -46,18 +53,11 @@ private:
 };
 
 
-// Polar coordinates for a point
-struct PolarCoords {
-    double r;
-    Angle t;
-};
-
-
 // Takes local sensor readings and computes location on map
 class VotingGrid {
 public:
     // Compares local sensor data to known map and computes most likely location and orientation
-    RobotMapPoint Evaluate(const vector<PolarCoords> & data, const RobotMap & map);
+    RobotMapPoint Evaluate(const vector<PolarCoordinates> & data, const RobotMap & map);
     
 private:
     // Grid square size

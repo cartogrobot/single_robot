@@ -9,32 +9,38 @@
 
 #include "map.h"
 
-MapPoint::MapPoint(double x, double y, const Angle & t): _x(x), _y(y), _t(t) {}
+MapPoint::MapPoint(double x, double y, const Angle & normal): _x(x), _y(y), _normal(normal) {}
 
-MapPoint::MapPoint(double r, const Angle & t, const MapPoint & location){
+// Constructs MapPoint from local polar coordinates and MapPoint for their origin
+MapPoint::MapPoint(const PolarCoordinates & polarCoords, const MapPoint & location){
     // Correct for robot orientation
-    _t = t + location._t;
+    _normal = polarCoords._angle + location._normal;
     
     // Convert to cartesian and add vectors
-    _x = std::cos(_t) * r + location._x;
-    _y = std::sin(_t) * r + location._y;
+    _x = std::cos(_normal) * polarCoords._r + location._x;
+    _y = std::sin(_normal) * polarCoords._r + location._y;
 }
 
-double MapPoint::getX(){
+// Accessor for x coordinate
+double MapPoint::getX() const{
     return _x;
 }
 
-double MapPoint::getY(){
+// Accessor for y coordinate
+double MapPoint::getY() const{
     return _y;
 }
 
-const Angle & MapPoint::getNormal(){
-    return _t;
+// Accessor for normal angle
+const Angle & MapPoint::getNormal() const{
+    return _normal;
 }
 
 
+// Constructs map with the given scale
 RobotMap::RobotMap(double scale): _scale(scale) {}
     
+// Adds a RobotMapPoint to the map and places it in the corresponding grid sector
 RobotMap::addPoint(const RobotMapPoint & p){
     int x = std::floor(p.getX() * _scale);
     int y = std::floor(p.getY() * _scale);
@@ -44,7 +50,7 @@ RobotMap::addPoint(const RobotMapPoint & p){
 
 
 // Compares local sensor data to known map and computes most likely location and orientation
-RobotMapPoint VotingGrid::Evaluate(const vector<PolarCoords> & data, const MapPoint & location,
-                                   const RobotMap & map){
+RobotMapPoint VotingGrid::Evaluate(const vector<PolarCoordinates> & data, 
+                                   const MapPoint & location, const RobotMap & map){
     
 }
