@@ -1,14 +1,21 @@
 /*
- * localization.cpp
+ * localization_point_norm.cpp
  * Author: Aven Bross, Max Hesser-Knoll
  * Date: 7/24/2015
  * 
  * Description:
- * Mapping system for robot localization
+ * Mapping system for robot localization using the point w/normal method
 */
 
-#include "map.h"
+#include "localization_point_normal.h"
 
+
+/* 
+ * RobotMapPoint
+ * Stores a point as cartesian coordinates and a normal vector as angle
+*/
+
+// Constructs MapPoint with the given parameters
 MapPoint::MapPoint(double x, double y, const Angle & normal): _x(x), _y(y), _normal(normal) {}
 
 // Constructs MapPoint from local polar coordinates and MapPoint for their origin
@@ -37,6 +44,11 @@ const Angle & MapPoint::getNormal() const{
 }
 
 
+/* 
+ * RobotMap
+ * World map of RobotMapPoints organized into grid sectors via a unordered_map
+*/
+
 // Constructs map with the given scale
 RobotMap::RobotMap(double scale): _scale(scale) {}
     
@@ -48,6 +60,11 @@ RobotMap::addPoint(const RobotMapPoint & p){
     _grid[pair(x,y)].push_back(p);
 }
 
+
+/* 
+ * VotingGrid
+ * Takes local sensor readings and computes location on map
+*/
 
 // Compares local sensor data to known map and computes most likely location and orientation
 RobotMapPoint VotingGrid::Evaluate(const vector<PolarCoordinates> & data, 

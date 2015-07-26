@@ -1,15 +1,16 @@
 /*
- * localization.h
+ * localization_point_norm.h
  * Author: Aven Bross, Max Hesser-Knoll
  * Date: 7/24/2015
  * 
  * Description:
- * Mapping system for robot localization
+ * Mapping system for robot localization using the point w/normal method
 */
 
 #include<cmath>
 #include<unordered_map>
 #include<pair>
+
 
 // Polar coordinates for a point
 struct PolarCoordinates {
@@ -18,14 +19,22 @@ struct PolarCoordinates {
 };
 
 
-// Stores a point as cartesian coordinates and normal vector as angle
+// Stores a point as cartesian coordinates and a normal vector as angle
 class RobotMapPoint {
 public:
+    // Constructs MapPoint with the given parameters
     RobotMapPoint(double x, double y, const Angle & normal);
+    
+    // Constructs MapPoint from local polar coordinates and MapPoint for their origin
     RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMapPoint & location);
     
+    // Accessor for x coordinate
     double getX();
+    
+    // Accessor for y coordinate
     double getY();
+    
+    // Accessor for normal angle
     const Angle & getNormal();
     
 private:
@@ -40,8 +49,10 @@ private:
 // World map of RobotMapPoints organized into grid sectors via a unordered_map
 class RobotMap {
 public:
+    // Constructs map with the given scale
     RobotMap(double scale);
     
+    // Adds a RobotMapPoint to the map and places it in the corresponding grid sector
     addPoint(const RobotMapPoint & p);
     
 private:
