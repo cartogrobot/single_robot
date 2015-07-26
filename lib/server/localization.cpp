@@ -9,9 +9,9 @@
 
 #include "map.h"
 
-MapPoint::MapPoint(double x, double y, double t): _x(x), _y(y), _t(t) {}
+MapPoint::MapPoint(double x, double y, const Angle & t): _x(x), _y(y), _t(t) {}
 
-MapPoint::MapPoint(double r, double t, const MapPoint & location){
+MapPoint::MapPoint(double r, const Angle & t, const MapPoint & location){
     // Correct for robot orientation
     _t = t + location._t;
     
@@ -28,7 +28,7 @@ double MapPoint::getY(){
     return _y;
 }
 
-double MapPoint::getTheta(){
+const Angle & MapPoint::getNormal(){
     return _t;
 }
 
@@ -44,6 +44,7 @@ RobotMap::addPoint(const RobotMapPoint & p){
 
 
 // Compares local sensor data to known map and computes most likely location and orientation
-RobotMapPoint VotingGrid::Evaluate(const vector<pair<double,double>> & data, const MapPoint & location, const RobotMap & map){
-
+RobotMapPoint VotingGrid::Evaluate(const vector<PolarCoords> & data, const MapPoint & location,
+                                   const RobotMap & map){
+    
 }
