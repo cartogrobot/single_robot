@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<!--
+    robot_corography.html
+    Aven Bross
+    Max Hesser-Knoll
+    24 July 2015
+
+    Uses webgl-ggc.js, J3DIMath.js, mersenne-twister.js
+-->
+<html style="overflow: hidden;">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>Wildfire Simulation</title>
+<style>
+#canvas-container {
+    position: absolute;
+    left: 0px;
+    top: 0px;
+    width: calc(100%);
+    text-align: center;
+}
+canvas {
+   display: inline;
+}
+</style>
+</head>
+<body onload="appMain('can1')"
+    style="overflow: hidden; margin: 0; padding: 0; background-color: #000000;">
+    
+<div id="can1text"
+    style="position: absolute; left: 20px; top: 10px;"></div>
+<div id="canvas-container">
+<canvas id="can1" width="200" height="200"
+    style="margin: 0; padding: 0; border:1px solid #000000;"></canvas>
+</div>
+
+<script id="vshader1" type="x-shader/x-vertex">
+// Vertex Shader #1
+
+uniform mat4 modelViewMatrix;
+uniform mat4 projectionMatrix;
+
+attribute vec4 vertex_attr;
+attribute vec4 color_attr;
+
+varying vec4 color_var;
+varying vec3 ptobjcoords;
+
+void main()
+{
+    // Compute projected vertex position
+    gl_Position = projectionMatrix * modelViewMatrix * vertex_attr;
+
+    // Send color to fragment shader
+    color_var = color_attr;
+
+    // Send object coordinates to fragment shader
+    ptobjcoords = vertex_attr.xyz / vertex_attr.w;
+}
+</script>
+
+<script id="fshader1" type="x-shader/x-fragment">
+// Fragment Shader #1
+
+#ifdef GL_ES
+precision mediump float;
+#endif
+
+varying vec4 color_var;
+varying vec3 ptobjcoords;
+
+void main()
+{
+    // Set color
+    gl_FragColor = color_var;
+}
+</script>
+
+<script type="text/javascript" src="J3DIMath.js"></script>
+<script type="text/javascript" src="webgl-ggc.js"></script>
+<script type="text/javascript" src="mersenne-twister.js"></script>
+<script type="text/javascript">
+// Application Code
+
+// Global variables
+
+// General
+var canvas;             // Our canvas
+var cwidth, cheight;    // Canvas width & height
+var gl;                 // WebGL context
+var redisplay_needed;   // True if redisplay needed
+
+var isClicked = false;
+var totaltime = 0;
+
+// Shaders
+var prog1;              // Shader program object
+
+
+// Random number generator
+var rng = new MersenneTwister();
+
+
+// WebGL Functions
+
+function myDisplay()
+{
+    gl.clearColor(0., 0., 0., 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    gl.useProgram(prog1);
+
+    gl.mvMatrix.makeIdentity();
+    gl.mvMatrix.translate(0., 0., -19.);
+    pushMvMatrix(gl);
+    
+    // Draw stuff here
+    
+    popMvMatrix(gl);
+
+    gl.flush();
+}
+
+
+function myIdle()
+{
+    // Get elapsed time
+    var elapsedtime = getElapsedTime(0.1); // Param: max value to return
+    totaltime += elapsedtime;   // Track total elapsed time
+    
+    //redisplay_needed = true;
+}
+
+
+function myReshape(w, h)
+{
+    // Set up viewport
+    gl.viewport(0, 0, w, h);
+
+    // Set up projection
+    gl.pMatrix.makeIdentity();
+    gl.pMatrix.perspective(60., w/h, 0.1, 20.0);
+}
+
+
+function myKeyboard(ch)
+{
+    // Note: Escape, arrows, etc. are handled inconsistently between
+    //  browsers. Alas! So we only deal with printable ASCII.
+    switch (ch)
+    {
+        default:
+            break;
+    }
+}
+
+
+function myMouseMove(x,y){
+    if(isClicked){
+        // Used for click and drag
+    }
+}
+
+
+function myMouseDown(x,y, right_click){
+    isClicked = true;
+}
+
+
+function myMouseUp(x,y){
+    isClicked = false;
+}
+
+
+function init()
+{
+    // Initialize variables here
+
+    // Shaders
+    prog1 = makeProgramObjectFromIds(gl, 'vshader1', 'fshader1');
+}
+
+
+// Below is kind of a mini-GLUT
+//
+// Call appMain(canvasId) to start up the app (on document load?)
+//
+// These global variables should be declared:
+//     canvas           - Our canvas object
+//     cwidth           - Width of canvas (pixels)
+//     cheight          - Height of canvas (pixels)
+//     gl               - WebGL context
+//     redisplay_needed - Set to true to indicate redisplay needed
+//
+// These functions will be called as needed, if they exist:
+//     init
+//     myDisplay
+//     myReshape
+//     myIdle
+//     myKeyboard
+
+
+// doFrame
+// Should be called repeatedly. Calls myIdle and, if needed, myReshape,
+// myDisplay.
+function doFrame()
+{
+    // Idle
+    if (myIdle) myIdle();
+
+    // Reshape if necessary
+    if (canvas.width != cwidth || canvas.height != cheight)
+    {
+        cwidth = canvas.width;
+        cheight = canvas.height;
+        if (myReshape) myReshape(cwidth, cheight);
+        redisplay_needed=true;
+    }
+
+    // Display if necessary
+    if (redisplay_needed)
+    {
+        redisplay_needed = false;
+        if (myDisplay) myDisplay();
+    }
+}
+
+
+// sizeCanvas
+// Called on window resize events
+function sizeCanvas()  // Might be given an event argument; ignored
+{
+    var w = window.innerWidth-200;
+    var h = window.innerHeight
+    // Make our canvas fill the window
+    if(w>h){
+        canvas.width = h;
+        canvas.height = h;
+    }
+    else{
+        canvas.width = w;
+        canvas.height = w;
+    }
+}
+
+
+// doKeypress
+// Called on keypress event
+function doKeypress(evt)
+{
+    if (evt.charCode && myKeyboard)
+        myKeyboard(String.fromCharCode(evt.charCode));
+}
+
+// doMouseMove
+// Called on mousemove event
+function doMouseMove(evt){
+    var x = ((evt.clientX)/cwidth)*22-11;
+    var y = (evt.clientY/cheight)*(-22)+11;
+    if(myMouseMove) myMouseMove(x, y);
+}
+
+// doMouseDown
+// Called on click event
+function doMouseDown(evt){
+    var x = ((evt.clientX)/cwidth)*22-11;
+    var y = (evt.clientY/cheight)*(-22)+11;
+    if(myMouseDown) myMouseDown(x, y);
+}
+
+function doMouseUp(evt){
+    var x = ((evt.clientX)/cwidth)*22-11;
+    var y = (evt.clientY/cheight)*(-22)+11;
+    if(myMouseUp) myMouseUp(x, y);
+}
+
+function stopContext(evt){
+    evt.preventDefault();
+}
+
+// addEvent
+// Used to add an extra event to the resize event without overwriting
+var addEvent = function(elem, type, eventHandle) {
+    if (elem == null || typeof(elem) == 'undefined') return;
+    if ( elem.addEventListener ) {
+        elem.addEventListener( type, eventHandle, false );
+    } else if ( elem.attachEvent ) {
+        elem.attachEvent( "on" + type, eventHandle );
+    } else {
+        elem["on"+type]=eventHandle;
+    }
+}
+
+// appMain
+// Our "main" function
+function appMain(canvasId)
+{
+    // Initialize canvas, gl
+    canvas = getCanvas(canvasId);
+    gl = getGlContext(canvas);
+    if (!gl)
+        return;
+
+    // Application-specific initialization
+    if (init) init();
+
+    // Add event listeners
+    sizeCanvas();
+    addEvent(window, "resize", sizeCanvas);
+    document.addEventListener('keypress', doKeypress, false);
+    document.getElementById("can1").addEventListener('mousemove', doMouseMove, false);
+    document.getElementById("can1").addEventListener('mousedown', doMouseDown, false);
+    document.getElementById("can1").addEventListener('contextmenu', stopContext, false);
+    document.getElementById("can1").addEventListener('mouseup', doMouseUp, false);
+
+    // Do our main loop
+    redisplay_needed = true;
+    animate(doFrame);
+}
+
+</script>
+</body>
+</html>
