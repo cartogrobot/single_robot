@@ -23,7 +23,7 @@ struct PolarCoordinates {
 class RobotMapPoint {
 public:
     // Constructs MapPoint with the given parameters
-    RobotMapPoint(double x, double y, const Angle & normal);
+    RobotMapPoint(double x, double y, const Angle & angle);
     
     // Constructs MapPoint from local polar coordinates and MapPoint for their origin
     RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMapPoint & location);
@@ -37,20 +37,19 @@ public:
     // Accessor for normal angle
     const Angle & getNormal();
     
-    // Arithmetic operators
-    RobotMapPoint & RobotMapPoint::operator+=();
-    RobotMapPoint & RobotMapPoint::operator-=();
-    RobotMapPoint RobotMapPoint::operator+() const;
-    RobotMapPoint RobotMapPoint::operator-() const;
-    
+    // Self modifying addition
+    RobotMapPoint & RobotMapPoint::operator+=();  
     
 private:
     // Cartesian coordinates
     double _x, _y;
     
     // Angle representing normal vector
-    Angle _normal;
+    Angle _angle;
 };
+
+// Non modifying addition
+RobotMapPoint operator+(const RobotMapPoint & p1, const RobotMapPoint & p2);
 
 struct VoteLocation{
     int _x, _y, _delta;

@@ -39,6 +39,7 @@ RobotMapPoint::RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMa
     _y = std::sin(_normal) * polarCoords._r + location._y;
 }
 
+// Self modifying addition
 RobotMapPoint & RobotMapPoint::operator+=(const RobotMapPoint & other){
     this->_x += other._x;
     this->_y += other._y;
@@ -46,8 +47,9 @@ RobotMapPoint & RobotMapPoint::operator+=(const RobotMapPoint & other){
     return *this;
 }
 
-RobotMapPoint operator+(const RobotMapPoint & other) const{
-    return RobotMapPoint(*this) += other;
+// Non modifying addition
+RobotMapPoint operator+(const RobotMapPoint & p1, const RobotMapPoint & p2){
+    return RobotMapPoint(p1) += p2;
 }
 
 // Accessor for x coordinate
@@ -83,50 +85,79 @@ void RobotMap::addPoint(const RobotMapPoint & p){
     _grid[std::pair(x,y)].push_back(p);
 }
 
+// Retrieves map points nearby the robot location
 vector<RobotMapPoints> getNearbyPoints(){
+    // Find discrete location of the robot
     int x = std::floor(_location.getX() * _scale);
     int y = std::floor(_location.getY() * _scale);
     
-    return _grid[std::pair(x,y)];
+    // Vector to store nearby points
+    vector<RobotMapPoints> nearbyPoints;
+    
+    // Find all points in the current or adjacent locations
+    for(int i=-1; i<=1; i++){
+        for(int j=-1; j<=1; j++){
+            for(const RobotMapPoint & point : _grid[std::pair(x+i,y+j)]){
+                nearbyPoints.push_back(point);
+            }
+        }
+    }
+    
+    return nearbyPoints;
 }
 
 // Compares local sensor data to known map and computes most likely location and orientation
 RobotMapPoint RobotMap::feasiblePose(const vector<PolarCoordinates> & data){
-    int topx = 0;
-    int topy = 0;
-    int topDelta = 0;
-    int topVotes = 0;
+    // Track the current most 
+    int bestX = 0, bestY = 0, bestAngle = 0, maxVotes = 0;
     
+    // Hash table to store feasible pose votes
     unordered_map<VoteLocation,int> votes;
     
     for(int i=0; i<angleDivisions; i++){
         Angle delta((pi2())/angleDivisions * i);
         
         for(PolarCoordinates pc : data){
+            // Add pi to invert the vector and add the current angle offset
             pc._angle += delta + pi();
             
+            // Retrieve map points nearby the robots location
             vector<RobotMapPoint> nearbyPoints = getNearbyPoints();
             
+            // Look at all nearby points
             for(RobotMapPoint point : nearbyPoints){
-                point += pc;
-                VoteLocation vl;
-                vl._x = std::floor(point.getX() * _voteScale);
-                vl._y = std::floor(poin.getY() * _voteScale);
-                vl._delta = i;
-                votes[vl] += 1
-                
-                if(votes[vl] > topVotes){
-                    topx = vl._y;
-                    topy = vl._y;
-                    topDelta = vl._delta;
+                // Compare normals to see if they are similar
+                if(point._angle > pc._angle - _voteErrorAngle &&
+                   point._angle > pc._angle + _voteErrorAngle){
+                    // Add the vector to the map point to find position
+                    point += pc;
+                    
+                    // Calculate discrete location in grid
+                    VoteLocation vl;
+                    vl._x = std::floor(point.getX() * _voteScale);
+                    vl._y = std::floor(poin.getY() * _voteScale);
+                    vl._delta = i;
+                    
+                    // Add a vote to this location
+                    votes[vl] += 1
+                    
+                    // Record locations that lead in votes
+                    if(votes[vl] > maxVotes){
+                        bestX = vl._y;
+                        topy = vl._y;
+                        bestAngle = vl._delta;
+                        maxVotes += 1;
+                    }
                 }
             }
         }
     }
     
-    double x = (double)topx + (1/scale)/2;
-    double y = (double)topy + (1/scale)/2;
-    Angle orientation(pi2()/angleDivisions * (0.5+topDelta));
+    // Estimate position from vote location
+    double x = (1 / scale) / 2 + bestX;
+    double y = (1 / scale) / 2 + bestY;
+    Angle orientation(pi2() / angleDivisions * (0.5 + bestAngle));
     
+    // Return the most probable robot location
     return RobotMapPoint(x, y, orientation);
 }

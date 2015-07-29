@@ -17,10 +17,11 @@ class Angle {
 public:
     Angle(double angle);
     
+    // Self modifying arithmetic
     Angle & operator+=(const Angle & other);
     Angle & operator-=(const Angle & other);
-    Angle operator+(const Angle & other) const;
-    Angle operator-(const Angle & other) const;
+    Angle & operator*=(const Angle & other);
+    Angle & operator/=(const Angle & other);
     
     operator double(){
         return _angle;
@@ -30,3 +31,9 @@ private:
 
     double _angle;
 };
+
+// Non modifying arithmetic
+Angle operator+(const Angle & a1, const Angle & a2);
+Angle operator-(const Angle & a1, const Angle & a2);
+Angle operator*(const Angle & a1, const Angle & a2);
+Angle operator/(const Angle & a1, const Angle & a2);
