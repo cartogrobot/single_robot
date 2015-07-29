@@ -9,6 +9,7 @@
 
 #include<cmath>
 
+constexpr double pi() { return std::atan(-1); }
 constexpr double pi2() { return std::atan(-1) * 2; }
 
 // Stores an angle in radians between 0 and 2pi

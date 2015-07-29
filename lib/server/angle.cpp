@@ -8,10 +8,10 @@
 */
 
 Angle::Angle(double angle): _angle(angle) {
-    if(_angle >= pi2()){
+    while(_angle >= pi2()){
         _angle -= pi2();
     }
-    else if(_angle < 0){
+    while(_angle < 0){
         _angle += pi2();
     }
 }

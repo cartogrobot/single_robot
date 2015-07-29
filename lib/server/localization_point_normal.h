@@ -37,6 +37,13 @@ public:
     // Accessor for normal angle
     const Angle & getNormal();
     
+    // Arithmetic operators
+    RobotMapPoint & RobotMapPoint::operator+=();
+    RobotMapPoint & RobotMapPoint::operator-=();
+    RobotMapPoint RobotMapPoint::operator+() const;
+    RobotMapPoint RobotMapPoint::operator-() const;
+    
+    
 private:
     // Cartesian coordinates
     double _x, _y;
@@ -45,35 +52,39 @@ private:
     Angle _normal;
 };
 
+struct VoteLocation{
+    int _x, _y, _delta;
+}
+
 
 // World map of RobotMapPoints organized into grid sectors via a unordered_map
 class RobotMap {
 public:
     // Constructs map with the given scale
-    RobotMap(double scale);
+    RobotMap(double hashScale, double voteScale, double voteErrorAngle, int angleDivisions);
     
     // Adds a RobotMapPoint to the map and places it in the corresponding grid sector
-    addPoint(const RobotMapPoint & p);
+    void addPoint(const RobotMapPoint & p);
+    
+    // Compares local sensor data to known map and computes most likely location and orientation
+    RobotMapPoint feasiblePose(const vector<PolarCoordinates> & data);
     
 private:
     // Hash map that sorts points into bins by general location
-    std::unordered_map<pair<int,int>, vector<RobotMapPoint>> _grid;
+    std::unordered_map<std::pair<int,int>, vector<RobotMapPoint>> _grid;
     
-    // Scaling factor that determines size of grid sectors
-    double _scale;
-};
-
-
-// Takes local sensor readings and computes location on map
-class VotingGrid {
-public:
-    // Compares local sensor data to known map and computes most likely location and orientation
-    RobotMapPoint Evaluate(const vector<PolarCoordinates> & data, const RobotMap & map);
+    // Scaling factor for hash grid sectors
+    double _hashScale;
     
-private:
-    // Grid square size
-    double _scale;
+    // Amount to vary angles
+    int _angleDivisions;
+    
+    // Scaling factor for voting grid sectors
+    double _voteScale;
     
     // Error allowed between normals
-    Angle _angleThreshold;
+    double _voteAngleError;
+    
+    // Robot location
+    RobotMapPoint location;
 };
