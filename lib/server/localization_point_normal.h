@@ -10,6 +10,7 @@
 #include<cmath>
 #include<unordered_map>
 #include<pair>
+#include<queue>
 
 
 // Polar coordinates for a point
@@ -69,6 +70,9 @@ public:
     RobotMapPoint feasiblePose(const vector<PolarCoordinates> & data);
     
 private:
+    // Retrieves map points nearby the robot location
+    vector<RobotMapPoints> getNearbyPoints();
+
     // Hash map that sorts points into bins by general location
     std::unordered_map<std::pair<int,int>, vector<RobotMapPoint>> _grid;
     
@@ -85,5 +89,5 @@ private:
     double _voteAngleError;
     
     // Robot location
-    RobotMapPoint location;
+    RobotMapPoint _location;
 };
