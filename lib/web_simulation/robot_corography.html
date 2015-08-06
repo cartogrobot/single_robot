@@ -96,10 +96,109 @@ var totaltime = 0;
 // Shaders
 var prog1;              // Shader program object
 
-
 // Random number generator
 var rng = new MersenneTwister();
 
+// Array of all lines in the scene
+var lines = []
+
+// Current point
+var setPoint = null;
+
+// Robot, made it a class for some reason...
+function robot(x, y, angle){
+    this.x = x;
+    this.y = y;
+    this.angle = angle;
+    
+    // Scans environment with given density and returns distance vectors
+    this.scan(scanLines){
+        // The vector of distance scans to be reported
+        var data = [];
+    
+        // Setup initial angle and delta
+        var angle = this.angle;
+        var delta = 2*Math.PI/scanLines
+        
+        // Scan in a circle, starting at the robot's current orientation
+        for(var i=0; i<scanLines; i++){
+            // Calculate scan line
+            var scanline;
+            scanline.p1 = { x: 0, y: 0 };
+            scanline.p2 = { x: Math.cos(angle)*100, y: Math.sin(angle)*100 };
+            
+            // Tracks the closest intersection
+            var bestPoint = null;
+            
+            // Look at all lines and find intersections
+            for each(line in lines){
+                var point = intersection(scanLine, line);
+                if(point != null){
+                    if(bestPoint == null){
+                        bestPoint = point;
+                    }
+                    else if(point.r < bestPoint.r){
+                        bestPoint = point;
+                    }
+                }
+            }
+            
+            // Save closest intersection as the distance scan
+            if(bestPoint != null){
+                data.push(bestPoint);
+            }
+            
+            // Increment the angle
+            angle += delta;
+            
+            // Correct into the range [0,2pi)
+            if(angle >= 2*Math.PI){
+                angle -= 2*Math.PI;
+            }
+        }
+        
+        return data;
+    }
+}
+
+// Find the intersection between two line segments if it exists and returns it in polar coordinates
+function intersection(line1, line2){
+    var x12 = line1.p1.x - line1.p2.x;
+    var x34 = line2.p1.x - line2.p2.x;
+    var y12 = line1.p1.y - line1.p2.y;
+    var y34 = line2.p1.y - line2.p2.y;
+
+    var c = x12 * y34 - y12 * x34;
+
+    // Check if there is no intersection
+    if (Math.abs(c) < 0.01)
+    {
+        // No intersection
+        return null;
+    }
+    
+    // Intersection
+    var a = line1.p1.x * line1.p2.y - line1.p1.y * line1.p2.x;
+    var b = line2.p1.x * line2.p2.y - line2.p1.y * line2.p2.x;
+
+    var x = (a * x34 - b * x12) / c;
+    var y = (a * y34 - b * y12) / c;
+    
+    // Check the intersection is on the line segments
+    if((x >= line1.p1.x && x <= line1.p2.x) || (x <= line1.p1.x && x >= line1.p2.x)){
+        if((y >= line1.p1.y && x <= line1.p2.y) || (x <= line1.p1.y && x >= line1.p2.y)){
+            if((x >= line2.p1.x && x <= line2.p2.x) || (x <= line2.p1.x && x >= line2.p2.x)){
+                if((y >= line2.p1.y && x <= line2.p2.y) || (x <= line2.p1.y && x >= line2.p2.y)){
+                    // Convert to polar and return
+                    return { r: Math.sqrt(x*x+y*y), angle: Math.atan(y/x) };
+                }
+            }
+        }
+    }
+
+    // If not, return 
+    return null;
+}
 
 // WebGL Functions
 
@@ -149,6 +248,15 @@ function myKeyboard(ch)
     //  browsers. Alas! So we only deal with printable ASCII.
     switch (ch)
     {
+        case 's':
+        case 'S':
+            // Scan and send somehow
+            return;
+        case 'r':
+        case 'R':
+            // Clear all lines from the scene
+            lines = [];
+            return;
         default:
             break;
     }
@@ -156,19 +264,22 @@ function myKeyboard(ch)
 
 
 function myMouseMove(x,y){
-    if(isClicked){
-        // Used for click and drag
-    }
 }
 
 
 function myMouseDown(x,y, right_click){
-    isClicked = true;
+    var point = { x: x, y: y };
+    if(setPoint == null){
+        setPoint = point;
+    }
+    else{
+        var line = { p1: setPoint, p2: point };
+        lines.push(line);
+    }
 }
 
 
 function myMouseUp(x,y){
-    isClicked = false;
 }
 
 
