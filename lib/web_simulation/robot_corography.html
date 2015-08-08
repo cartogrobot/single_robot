@@ -101,9 +101,16 @@ var rng = new MersenneTwister();
 
 // Array of all lines in the scene
 var lines = []
+var lastScan = [];
 
 // Current point
 var setPoint = null;
+
+var cartogrobot;
+
+function arctan(x, y){
+    
+}
 
 // Robot, made it a class for some reason...
 function robot(x, y, angle){
@@ -112,33 +119,36 @@ function robot(x, y, angle){
     this.angle = angle;
     
     // Scans environment with given density and returns distance vectors
-    this.scan(scanLines){
+    this.scan = function(scanLines){
         // The vector of distance scans to be reported
         var data = [];
     
         // Setup initial angle and delta
         var angle = this.angle;
-        var delta = 2*Math.PI/scanLines
+        var delta = 2.0*Math.PI / scanLines;
         
         // Scan in a circle, starting at the robot's current orientation
         for(var i=0; i<scanLines; i++){
             // Calculate scan line
-            var scanline;
-            scanline.p1 = { x: 0, y: 0 };
-            scanline.p2 = { x: Math.cos(angle)*100, y: Math.sin(angle)*100 };
+            var scanLine = {p1: { x: this.x, y: this.y },
+                            p2: { x: Math.cos(angle), y: Math.sin(angle) }};
             
             // Tracks the closest intersection
             var bestPoint = null;
+            var bestLine = null;
             
             // Look at all lines and find intersections
-            for each(line in lines){
+            for(var j=0; j<lines.length; j++){
+                line = lines[j];
+                
                 var point = intersection(scanLine, line);
+                
                 if(point != null){
-                    if(bestPoint == null){
-                        bestPoint = point;
-                    }
-                    else if(point.r < bestPoint.r){
-                        bestPoint = point;
+                    var polar = { r: Math.sqrt(point.x*point.x+point.y*point.y), angle: Math.atan2(point.y, point.x) };
+                    
+                    if(bestPoint == null || point.r < bestPoint.r){
+                        bestPoint = polar;
+                        bestLine = { p1: { x: this.x, y: this.y }, p2: point };
                     }
                 }
             }
@@ -146,6 +156,8 @@ function robot(x, y, angle){
             // Save closest intersection as the distance scan
             if(bestPoint != null){
                 data.push(bestPoint);
+                console.log(bestPoint);
+                lastScan.push(bestLine);
             }
             
             // Increment the angle
@@ -158,7 +170,7 @@ function robot(x, y, angle){
         }
         
         return data;
-    }
+    };
 }
 
 // Find the intersection between two line segments if it exists and returns it in polar coordinates
@@ -184,17 +196,15 @@ function intersection(line1, line2){
     var x = (a * x34 - b * x12) / c;
     var y = (a * y34 - b * y12) / c;
     
-    // Check the intersection is on the line segments
-    if((x >= line1.p1.x && x <= line1.p2.x) || (x <= line1.p1.x && x >= line1.p2.x)){
-        if((y >= line1.p1.y && x <= line1.p2.y) || (x <= line1.p1.y && x >= line1.p2.y)){
-            if((x >= line2.p1.x && x <= line2.p2.x) || (x <= line2.p1.x && x >= line2.p2.x)){
-                if((y >= line2.p1.y && x <= line2.p2.y) || (x <= line2.p1.y && x >= line2.p2.y)){
-                    // Convert to polar and return
-                    return { r: Math.sqrt(x*x+y*y), angle: Math.atan(y/x) };
-                }
-            }
-        }
-    }
+    console.log(x + ", " + y);
+    
+   //Check the intersection is on the line segments
+    //if((x >= line2.p1.x && x <= line2.p2.x) || (x <= line2.p1.x && x >= line2.p2.x)){
+      //  if((y >= line2.p1.y && x <= line2.p2.y) || (x <= line2.p1.y && x >= line2.p2.y)){
+            // Convert to polar and return
+            return {x: x, y: y};
+        //}
+    //}
 
     // If not, return 
     return null;
@@ -204,7 +214,7 @@ function intersection(line1, line2){
 
 function myDisplay()
 {
-    gl.clearColor(0., 0., 0., 1.0);
+    gl.clearColor(0.7, 0.7, 0.7, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     gl.useProgram(prog1);
@@ -213,7 +223,9 @@ function myDisplay()
     gl.mvMatrix.translate(0., 0., -19.);
     pushMvMatrix(gl);
     
-    // Draw stuff here
+    drawLines(gl, lines, 0., 0., 0.);
+    drawLines(gl, lastScan, 1., 0., 0.);
+    drawPoints(gl);
     
     popMvMatrix(gl);
 
@@ -250,13 +262,15 @@ function myKeyboard(ch)
     {
         case 's':
         case 'S':
-            // Scan and send somehow
-            return;
+            lastScan = [];
+            cartogrobot.scan(4);
+            redisplay_needed = true;
+            break;
         case 'r':
         case 'R':
             // Clear all lines from the scene
             lines = [];
-            return;
+            break;
         default:
             break;
     }
@@ -269,13 +283,17 @@ function myMouseMove(x,y){
 
 function myMouseDown(x,y, right_click){
     var point = { x: x, y: y };
+    console.log(point);
     if(setPoint == null){
         setPoint = point;
     }
     else{
         var line = { p1: setPoint, p2: point };
         lines.push(line);
+        setPoint = null;
     }
+    
+    redisplay_needed = true;
 }
 
 
@@ -286,6 +304,7 @@ function myMouseUp(x,y){
 function init()
 {
     // Initialize variables here
+    cartogrobot = new robot(0.0,0.0,0.0);
 
     // Shaders
     prog1 = makeProgramObjectFromIds(gl, 'vshader1', 'fshader1');
@@ -366,7 +385,7 @@ function doKeypress(evt)
 // doMouseMove
 // Called on mousemove event
 function doMouseMove(evt){
-    var x = ((evt.clientX)/cwidth)*22-11;
+    var x = ((evt.clientX-(window.innerWidth-canvas.width)/2)/cwidth)*22-11;;
     var y = (evt.clientY/cheight)*(-22)+11;
     if(myMouseMove) myMouseMove(x, y);
 }
@@ -374,13 +393,13 @@ function doMouseMove(evt){
 // doMouseDown
 // Called on click event
 function doMouseDown(evt){
-    var x = ((evt.clientX)/cwidth)*22-11;
+    var x = ((evt.clientX-(window.innerWidth-canvas.width)/2)/cwidth)*22-11;;
     var y = (evt.clientY/cheight)*(-22)+11;
     if(myMouseDown) myMouseDown(x, y);
 }
 
 function doMouseUp(evt){
-    var x = ((evt.clientX)/cwidth)*22-11;
+    var x = ((evt.clientX-(window.innerWidth-canvas.width)/2)/cwidth)*22-11;;
     var y = (evt.clientY/cheight)*(-22)+11;
     if(myMouseUp) myMouseUp(x, y);
 }
@@ -427,6 +446,224 @@ function appMain(canvasId)
     // Do our main loop
     redisplay_needed = true;
     animate(doFrame);
+}
+
+// Draws the roads in one draw call with VBO
+function drawLines(ctx, lineArray, r, g, b)
+{
+    // Get attribute locations
+    var attriblocs = getAttribLocs(ctx);
+    if (!attriblocs)
+    {
+        errOut(arguments.callee.name + ': ' +
+               'Could not get attribute locations');
+        return;
+    }
+
+    // Create VBOs
+    var buffs = new Array(5);
+    var datas = new Array(5);
+    var array_size = 4*2*lines.length;
+    for (var i = 0; i < 5; ++i)
+    {
+        buffs[i] = ctx.createBuffer();
+        var components = (i == 2 || i == 4) ? 3 : 4;
+        datas[i] = new Float32Array(components*array_size);
+    }
+    
+    var b4 = 0;
+    var b3 = 0;
+    
+    for(var i=0; i<lineArray.length; i++){
+        var line = lineArray[i];
+        
+        // vertex coords
+        datas[0][b4+0] = line.p1.x;
+        datas[0][b4+1] = line.p1.y;
+        datas[0][b4+2] = 0.;
+        datas[0][b4+3] = 1.;
+        datas[0][b4+4] = line.p2.x;
+        datas[0][b4+5] = line.p2.y;
+        datas[0][b4+6] = 0.;
+        datas[0][b4+7] = 1.;
+
+        // color
+        datas[1][b4+0] = r;
+        datas[1][b4+1] = g;
+        datas[1][b4+2] = b;
+        datas[1][b4+3] = 1.;
+        datas[1][b4+4] = r;
+        datas[1][b4+5] = g;
+        datas[1][b4+6] = b;
+        datas[1][b4+7] = 1.;
+
+        // normal
+        datas[2][b3+0] = 0.;
+        datas[2][b3+1] = 0.;
+        datas[2][b3+2] = 1.;
+        datas[2][b3+3] = 0.;
+        datas[2][b3+4] = 0.;
+        datas[2][b3+5] = 1.;
+
+        // texture coords
+        datas[3][b4+0] = line.p1.x;
+        datas[3][b4+1] = line.p1.y;
+        datas[3][b4+2] = 0.;
+        datas[3][b4+3] = 1.;
+        datas[3][b4+4] = line.p2.x;
+        datas[3][b4+5] = line.p2.y;
+        datas[3][b4+6] = 0.;
+        datas[3][b4+7] = 1.;
+
+        // tangent
+        datas[4][b3+0] = 1.;
+        datas[4][b3+1] = 0.;
+        datas[4][b3+2] = 0.;
+        datas[4][b3+3] = 1.;
+        datas[4][b3+4] = 0.;
+        datas[4][b3+5] = 0.;
+        
+        b4 += 8;
+        b3 += 6;
+    }
+    
+    for (var i in attriblocs)
+    {
+        if (attriblocs[i] == -1)
+            continue;
+        var components = (i == 2 || i == 4) ? 3 : 4;
+        ctx.bindBuffer(ctx.ARRAY_BUFFER, buffs[i]);
+        ctx.bufferData(
+            ctx.ARRAY_BUFFER, datas[i], ctx.STATIC_DRAW);
+        ctx.vertexAttribPointer(
+            attriblocs[i], components, ctx.FLOAT, false, 0, 0);
+    }
+
+    // Set up uniforms, enable attributes
+    sendMatrices(ctx);
+    for (var i in attriblocs)
+        if (attriblocs[i] != -1)
+            ctx.enableVertexAttribArray(attriblocs[i]);
+
+    // Draw with VBO
+    ctx.drawArrays(ctx.LINES, 0, array_size);
+
+    // Disable attributes
+    for (var i in attriblocs)
+        if (attriblocs[i] != -1)
+            ctx.disableVertexAttribArray(attriblocs[i]);
+
+    // Delete buffer objects
+    for (i in buffs)
+        ctx.deleteBuffer(buffs[i]);
+}
+
+// Draws the roads in one draw call with VBO
+function drawPoints(ctx)
+{
+    // Get attribute locations
+    var attriblocs = getAttribLocs(ctx);
+    if (!attriblocs)
+    {
+        errOut(arguments.callee.name + ': ' +
+               'Could not get attribute locations');
+        return;
+    }
+
+    // Create VBOs
+    var buffs = new Array(5);
+    var datas = new Array(5);
+    var array_size = 4*2;
+    for (var i = 0; i < 5; ++i)
+    {
+        buffs[i] = ctx.createBuffer();
+        var components = (i == 2 || i == 4) ? 3 : 4;
+        datas[i] = new Float32Array(components*array_size);
+    }
+    
+    var spx = 1000.0;
+    var spy = 1000.0;
+    
+    if(setPoint != null){
+        spx = setPoint.x;
+        spy = setPoint.y;
+    }
+        
+    // vertex coords
+    datas[0][0] = cartogrobot.x;
+    datas[0][1] = cartogrobot.y;
+    datas[0][2] = 0.;
+    datas[0][3] = 1.;
+    datas[0][4] = spx;
+    datas[0][5] = spy;
+    datas[0][6] = 0.;
+    datas[0][7] = 1.;
+
+    // color
+    datas[1][0] = 1.;
+    datas[1][1] = 0.;
+    datas[1][2] = 0.;
+    datas[1][3] = 1.;
+    datas[1][4] = 0.;
+    datas[1][5] = 0.;
+    datas[1][6] = 0.;
+    datas[1][7] = 1.;
+
+    // normal
+    datas[2][0] = 0.;
+    datas[2][1] = 0.;
+    datas[2][2] = 1.;
+    datas[2][3] = 0.;
+    datas[2][4] = 0.;
+    datas[2][5] = 1.;
+
+    // texture coords
+    datas[3][0] = cartogrobot.x;
+    datas[3][1] = cartogrobot.y;
+    datas[3][2] = 0.;
+    datas[3][3] = 1.;
+    datas[3][4] = spx;
+    datas[3][5] = spy;
+    datas[3][6] = 0.;
+    datas[3][7] = 1.;
+
+    // tangent
+    datas[4][0] = 1.;
+    datas[4][1] = 0.;
+    datas[4][2] = 0.;
+    datas[4][3] = 1.;
+    datas[4][4] = 0.;
+    datas[4][5] = 0.;
+    
+    for (var i in attriblocs)
+    {
+        if (attriblocs[i] == -1)
+            continue;
+        var components = (i == 2 || i == 4) ? 3 : 4;
+        ctx.bindBuffer(ctx.ARRAY_BUFFER, buffs[i]);
+        ctx.bufferData(
+            ctx.ARRAY_BUFFER, datas[i], ctx.STATIC_DRAW);
+        ctx.vertexAttribPointer(
+            attriblocs[i], components, ctx.FLOAT, false, 0, 0);
+    }
+
+    // Set up uniforms, enable attributes
+    sendMatrices(ctx);
+    for (var i in attriblocs)
+        if (attriblocs[i] != -1)
+            ctx.enableVertexAttribArray(attriblocs[i]);
+
+    // Draw with VBO
+    ctx.drawArrays(ctx.POINTS, 0, array_size);
+
+    // Disable attributes
+    for (var i in attriblocs)
+        if (attriblocs[i] != -1)
+            ctx.disableVertexAttribArray(attriblocs[i]);
+
+    // Delete buffer objects
+    for (i in buffs)
+        ctx.deleteBuffer(buffs[i]);
 }
 
 </script>
