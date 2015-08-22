@@ -30,7 +30,7 @@ canvas {
 <div id="can1text"
     style="position: absolute; left: 20px; top: 10px;"></div>
 <div id="canvas-container">
-<canvas id="can1" width="200" height="200"
+<canvas id="can1" width="400" height="400"
     style="margin: 0; padding: 0; border:1px solid #000000;"></canvas>
 </div>
 
@@ -105,6 +105,7 @@ var lastScan = [];
 
 // Current point
 var setPoint = null;
+var resolution = 16;
 
 var cartogrobot;
 
@@ -129,9 +130,10 @@ function robot(x, y, angle){
         
         // Scan in a circle, starting at the robot's current orientation
         for(var i=0; i<scanLines; i++){
+            
             // Calculate scan line
             var scanLine = {p1: { x: this.x, y: this.y },
-                            p2: { x: Math.cos(angle), y: Math.sin(angle) }};
+                            p2: { x: Math.cos(angle)*100, y: Math.sin(angle)*100 }};
             
             // Tracks the closest intersection
             var bestPoint = null;
@@ -144,9 +146,9 @@ function robot(x, y, angle){
                 var point = intersection(scanLine, line);
                 
                 if(point != null){
-                    var polar = { r: Math.sqrt(point.x*point.x+point.y*point.y), angle: Math.atan2(point.y, point.x) };
+                    var polar = { r: Math.sqrt(Math.pow(this.x-point.x, 2)+Math.pow(this.y-point.y, 2)), angle: Math.atan2(point.y, point.x) };
                     
-                    if(bestPoint == null || point.r < bestPoint.r){
+                    if(bestPoint == null || polar.r < bestPoint.r){
                         bestPoint = polar;
                         bestLine = { p1: { x: this.x, y: this.y }, p2: point };
                     }
@@ -156,7 +158,7 @@ function robot(x, y, angle){
             // Save closest intersection as the distance scan
             if(bestPoint != null){
                 data.push(bestPoint);
-                console.log(bestPoint);
+                //console.log(bestPoint);
                 lastScan.push(bestLine);
             }
             
@@ -164,10 +166,12 @@ function robot(x, y, angle){
             angle += delta;
             
             // Correct into the range [0,2pi)
-            if(angle >= 2*Math.PI){
-                angle -= 2*Math.PI;
+            if(angle >= 2.0*Math.PI){
+                angle -= 2.0*Math.PI;
             }
         }
+        
+        console.log(data.length);
         
         return data;
     };
@@ -181,13 +185,6 @@ function intersection(line1, line2){
     var y34 = line2.p1.y - line2.p2.y;
 
     var c = x12 * y34 - y12 * x34;
-
-    // Check if there is no intersection
-    if (Math.abs(c) < 0.01)
-    {
-        // No intersection
-        return null;
-    }
     
     // Intersection
     var a = line1.p1.x * line1.p2.y - line1.p1.y * line1.p2.x;
@@ -196,15 +193,18 @@ function intersection(line1, line2){
     var x = (a * x34 - b * x12) / c;
     var y = (a * y34 - b * y12) / c;
     
-    console.log(x + ", " + y);
-    
-   //Check the intersection is on the line segments
-    //if((x >= line2.p1.x && x <= line2.p2.x) || (x <= line2.p1.x && x >= line2.p2.x)){
-      //  if((y >= line2.p1.y && x <= line2.p2.y) || (x <= line2.p1.y && x >= line2.p2.y)){
-            // Convert to polar and return
-            return {x: x, y: y};
-        //}
-    //}
+    //Check the intersection is on the line segments
+    if((x >= line1.p1.x && x <= line1.p2.x) || (x <= line1.p1.x && x >= line1.p2.x)){
+        if((y >= line1.p1.y && y <= line1.p2.y) || (y <= line1.p1.y && y >= line1.p2.y)){
+            if((x >= line2.p1.x && x <= line2.p2.x) || (x <= line2.p1.x && x >= line2.p2.x)){
+                if((y >= line2.p1.y && y <= line2.p2.y) || (y <= line2.p1.y && y >= line2.p2.y)){
+                    //console.log(x + ", " + y);
+                    // Convert to polar and return
+                    return {x: x, y: y};
+                }
+            }
+        }
+    }
 
     // If not, return 
     return null;
@@ -253,6 +253,14 @@ function myReshape(w, h)
     gl.pMatrix.perspective(60., w/h, 0.1, 20.0);
 }
 
+function scan(){
+    while(lastScan.length > 0){
+        lastScan.pop();
+    }
+    cartogrobot.scan(resolution);
+    redisplay_needed = true;
+}
+
 
 function myKeyboard(ch)
 {
@@ -260,16 +268,49 @@ function myKeyboard(ch)
     //  browsers. Alas! So we only deal with printable ASCII.
     switch (ch)
     {
-        case 's':
-        case 'S':
-            lastScan = [];
-            cartogrobot.scan(4);
-            redisplay_needed = true;
+        case ' ':
+            scan();
             break;
         case 'r':
         case 'R':
             // Clear all lines from the scene
-            lines = [];
+            while(lines.length > 4){
+                lines.pop();
+            }
+            cartogrobot.x = 0.0;
+            cartogrobot.y = 0.0;
+            scan();
+            redisplay_needed = true;
+            break;
+        case 's':
+        case 'S':
+            cartogrobot.y -= 0.5;
+            scan();
+            break;
+        case 'w':
+        case 'W':
+            cartogrobot.y += 0.5;
+            scan();
+            break;
+        case 'a':
+        case 'A':
+            cartogrobot.x -= 0.5;
+            scan();
+            break;
+        case 'd':
+        case 'D':
+            cartogrobot.x += 0.5;
+            scan();
+            break;
+        case 'q':
+        case 'Q':
+            resolution -= 4;
+            scan();
+            break;
+        case 'e':
+        case 'E':
+            resolution += 4;
+            scan();
             break;
         default:
             break;
@@ -283,7 +324,6 @@ function myMouseMove(x,y){
 
 function myMouseDown(x,y, right_click){
     var point = { x: x, y: y };
-    console.log(point);
     if(setPoint == null){
         setPoint = point;
     }
@@ -291,6 +331,7 @@ function myMouseDown(x,y, right_click){
         var line = { p1: setPoint, p2: point };
         lines.push(line);
         setPoint = null;
+        scan();
     }
     
     redisplay_needed = true;
@@ -305,6 +346,13 @@ function init()
 {
     // Initialize variables here
     cartogrobot = new robot(0.0,0.0,0.0);
+    
+    lines.push({p1: {x: -11.0, y: -11.0}, p2: {x: -11.0, y: 11.0}});
+    lines.push({p1: {x: -11.0, y: -11.0}, p2: {x: 11.0, y: -11.0}});
+    lines.push({p1: {x: 11.0, y: 11.0}, p2: {x: 11.0, y: -11.0}});
+    lines.push({p1: {x: 11.0, y: 11.0}, p2: {x: -11.0, y: 11.0}});
+    
+    scan();
 
     // Shaders
     prog1 = makeProgramObjectFromIds(gl, 'vshader1', 'fshader1');
@@ -360,7 +408,7 @@ function doFrame()
 // Called on window resize events
 function sizeCanvas()  // Might be given an event argument; ignored
 {
-    var w = window.innerWidth-200;
+    /*var w = window.innerWidth-200;
     var h = window.innerHeight
     // Make our canvas fill the window
     if(w>h){
@@ -370,7 +418,7 @@ function sizeCanvas()  // Might be given an event argument; ignored
     else{
         canvas.width = w;
         canvas.height = w;
-    }
+    }*/
 }
 
 
@@ -463,7 +511,7 @@ function drawLines(ctx, lineArray, r, g, b)
     // Create VBOs
     var buffs = new Array(5);
     var datas = new Array(5);
-    var array_size = 4*2*lines.length;
+    var array_size = 4*2*lineArray.length;
     for (var i = 0; i < 5; ++i)
     {
         buffs[i] = ctx.createBuffer();
