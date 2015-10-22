@@ -7,11 +7,14 @@
  * Mapping system for robot localization using the point w/normal method
 */
 
+#ifndef __LOCALIZATION_POINT_NORMAL_H
+#define __LOCALIZATION_POINT_NORMAL_H
+
 #include<cmath>
 #include<unordered_map>
-#include<pair>
+#include<utility>
 #include<queue>
-
+#include "angle.h"
 
 // Polar coordinates for a point
 struct PolarCoordinates {
@@ -20,26 +23,40 @@ struct PolarCoordinates {
 };
 
 
+struct pairhash {
+public:
+  template <typename T, typename U>
+  std::size_t operator()(const std::pair<T, U> &x) const
+  {
+    return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
+  }
+};
+
 // Stores a point as cartesian coordinates and a normal vector as angle
 class RobotMapPoint {
 public:
+    RobotMapPoint();
+    
     // Constructs MapPoint with the given parameters
     RobotMapPoint(double x, double y, const Angle & angle);
+    
+    // Constructs MapPoint from local polar coordinates and MapPoint for their origin
+    RobotMapPoint(const PolarCoordinates & polarCoords);
     
     // Constructs MapPoint from local polar coordinates and MapPoint for their origin
     RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMapPoint & location);
     
     // Accessor for x coordinate
-    double getX();
+    double getX() const;
     
     // Accessor for y coordinate
-    double getY();
+    double getY() const;
     
     // Accessor for normal angle
-    const Angle & getNormal();
+    const Angle & getAngle() const;
     
     // Self modifying addition
-    RobotMapPoint & RobotMapPoint::operator+=();  
+    RobotMapPoint & operator+=(const RobotMapPoint & other);  
     
 private:
     // Cartesian coordinates
@@ -52,29 +69,41 @@ private:
 // Non modifying addition
 RobotMapPoint operator+(const RobotMapPoint & p1, const RobotMapPoint & p2);
 
+
 struct VoteLocation{
     int _x, _y, _delta;
-}
+};
+
+bool operator==(const VoteLocation & v1, const VoteLocation & v2);
+
+struct votehash {
+public:
+  std::size_t operator()(const VoteLocation &x) const
+  {
+    return std::hash<int>()(x._x) ^ std::hash<int>()(x._y) ^ std::hash<int>()(x._delta);
+  }
+};
 
 
 // World map of RobotMapPoints organized into grid sectors via a unordered_map
 class RobotMap {
 public:
     // Constructs map with the given scale
-    RobotMap(double hashScale, double voteScale, double voteErrorAngle, int angleDivisions);
+    RobotMap(double hashScale = 1.0, double voteScale = 1.0,
+             double voteErrorAngle = 2.0, int angleDivisions = 16);
     
     // Adds a RobotMapPoint to the map and places it in the corresponding grid sector
     void addPoint(const RobotMapPoint & p);
     
     // Compares local sensor data to known map and computes most likely location and orientation
-    RobotMapPoint feasiblePose(const vector<PolarCoordinates> & data);
+    RobotMapPoint feasiblePose(const std::vector<PolarCoordinates> & data);
     
 private:
     // Retrieves map points nearby the robot location
-    vector<RobotMapPoints> getNearbyPoints();
+    std::vector<RobotMapPoint> getNearbyPoints(int range = 1);
 
     // Hash map that sorts points into bins by general location
-    std::unordered_map<std::pair<int,int>, vector<RobotMapPoint>> _grid;
+    std::unordered_map<std::pair<int,int>, std::vector<RobotMapPoint>, pairhash> _grid;
     
     // Scaling factor for hash grid sectors
     double _hashScale;
@@ -91,3 +120,5 @@ private:
     // Robot location
     RobotMapPoint _location;
 };
+
+#endif

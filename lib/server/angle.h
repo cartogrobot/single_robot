@@ -15,6 +15,7 @@ constexpr double pi2() { return std::atan(-1) * 2; }
 // Stores an angle in radians between 0 and 2pi
 class Angle {
 public:
+    Angle();
     Angle(double angle);
     
     // Self modifying arithmetic
@@ -23,7 +24,7 @@ public:
     Angle & operator*=(const Angle & other);
     Angle & operator/=(const Angle & other);
     
-    operator double(){
+    operator double() const{
         return _angle;
     }
     
@@ -31,9 +32,3 @@ private:
 
     double _angle;
 };
-
-// Non modifying arithmetic
-Angle operator+(const Angle & a1, const Angle & a2);
-Angle operator-(const Angle & a1, const Angle & a2);
-Angle operator*(const Angle & a1, const Angle & a2);
-Angle operator/(const Angle & a1, const Angle & a2);

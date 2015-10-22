@@ -15,28 +15,30 @@
  * Stores a point as cartesian coordinates and a normal vector as angle
 */
 
+RobotMapPoint::RobotMapPoint(): _x(0.0), _y(0.0), _angle(0.0) {}
+
 // Constructs MapPoint with the given parameters
-RobotMapPoint::RobotMapPoint(double x, double y, const Angle & normal): _x(x), _y(y), _normal(normal) {}
+RobotMapPoint::RobotMapPoint(double x, double y, const Angle & angle): _x(x), _y(y), _angle(angle) {}
 
 // Constructs MapPoint from local polar coordinates and MapPoint for their origin
 RobotMapPoint::RobotMapPoint(const PolarCoordinates & polarCoords){
     // Correct for robot orientation
-    _normal = polarCoords._angle;
+    _angle = polarCoords._angle;
     
     // Convert to cartesian and add vectors
-    _x = std::cos(_normal) * polarCoords._r;
-    _y = std::sin(_nlocalization_point_normal.hormal) * polarCoords._r;
+    _x = std::cos(_angle) * polarCoords._r;
+    _y = std::sin(_angle) * polarCoords._r;
 }
 
 
 // Constructs MapPoint from local polar coordinates and MapPoint for their origin
 RobotMapPoint::RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMapPoint & location){
     // Correct for robot orientation
-    _normal = polarCoords._angle + location._normal;
+    _angle = polarCoords._angle + location._angle;
     
     // Convert to cartesian and add vectors
-    _x = std::cos(_normal) * polarCoords._r + location._x;
-    _y = std::sin(_normal) * polarCoords._r + location._y;
+    _x = std::cos(_angle) * polarCoords._r + location._x;
+    _y = std::sin(_angle) * polarCoords._r + location._y;
 }
 
 // Self modifying addition
@@ -63,8 +65,13 @@ double RobotMapPoint::getY() const{
 }
 
 // Accessor for normal angle
-const Angle & RobotMapPoint::getNormal() const{
-    return _normal;
+const Angle & RobotMapPoint::getAngle() const{
+    return _angle;
+}
+
+
+bool operator==(const VoteLocation & v1, const VoteLocation & v2){
+    return (v1._x == v2._x) && (v1._y == v2._y) && (v1._delta == v2._delta);
 }
 
 
@@ -74,31 +81,34 @@ const Angle & RobotMapPoint::getNormal() const{
 */
 
 // Constructs map with the given scale
-RobotMap::RobotMap(double hashScale, double voteScale, double voteErrorAngle, int angleDivisions):
-    _hashScale(hashScale), _voteScale(voteScale), _voteErrorAngle(voteErrorAngle), _angleDivisions(angleDivisions) {}
+RobotMap::RobotMap(double hashScale, double voteScale, double voteAngleError, int angleDivisions):
+    _hashScale(hashScale), _voteScale(voteScale), _voteAngleError(voteAngleError), _angleDivisions(angleDivisions) {}
     
 // Adds a RobotMapPoint to the map and places it in the corresponding grid sector
 void RobotMap::addPoint(const RobotMapPoint & p){
-    int x = std::floor(p.getX() * _scale);
-    int y = std::floor(p.getY() * _scale);
+    int x = std::floor(p.getX() * _hashScale);
+    int y = std::floor(p.getY() * _hashScale);
     
-    _grid[std::pair(x,y)].push_back(p);
+    _grid[std::pair<int,int>(x,y)].push_back(p);
 }
 
 // Retrieves map points nearby the robot location
-vector<RobotMapPoints> RobotMap::getNearbyPoints(){
+std::vector<RobotMapPoint> RobotMap::getNearbyPoints(int range){
     // Find discrete location of the robot
-    int x = std::floor(_location.getX() * _scale);
-    int y = std::floor(_location.getY() * _scale);
+    int x = std::floor(_location.getX() * _hashScale);
+    int y = std::floor(_location.getY() * _hashScale);
     
     // Vector to store nearby points
-    vector<RobotMapPoints> nearbyPoints;
+    std::vector<RobotMapPoint> nearbyPoints;
     
     // Find all points in the current or adjacent locations
-    for(int i=-1; i<=1; i++){
-        for(int j=-1; j<=1; j++){
-            for(const RobotMapPoint & point : _grid[std::pair(x+i,y+j)]){
-                nearbyPoints.push_back(point);
+    for(int i=(-1)*range; i<=range; i++){
+        for(int j=(-1)*range; j<=range; j++){
+            std::pair<int,int> pos(x+i,y+j);
+            if(_grid.count(pos) != 0){
+                for(const RobotMapPoint & point : _grid[pos]){
+                    nearbyPoints.push_back(point);
+                }
             }
         }
     }
@@ -107,20 +117,20 @@ vector<RobotMapPoints> RobotMap::getNearbyPoints(){
 }
 
 // Compares local sensor data to known map and computes most likely location and orientation
-RobotMapPoint RobotMap::feasiblePose(const vector<PolarCoordinates> & data){
+RobotMapPoint RobotMap::feasiblePose(const std::vector<PolarCoordinates> & data){
     // Most votes given
     int maxVotes = 0;
 
     // Hash table to store feasible pose votes
-    std::unordered_map<VoteLocation,int> votes;
+    std::unordered_map<VoteLocation,int, votehash> votes;
     
     // Best vote locations
     std::queue<VoteLocation> bestLocations;
     
     // Start angle 90 degrees back from last known angle
-    Angle initAngle = _location._angle - pi()/2;
+    Angle initAngle = _location.getAngle() - pi()/2;
     
-    for(int i=0; i<angleDivisions; i++){
+    for(int i=0; i<_angleDivisions; i++){
         // Increment test angle
         Angle testAngle(initAngle + (pi() / _angleDivisions) * i);
         
@@ -129,21 +139,21 @@ RobotMapPoint RobotMap::feasiblePose(const vector<PolarCoordinates> & data){
             pc._angle += testAngle + pi();
             
             // Retrieve map points nearby the robots location
-            vector<RobotMapPoint> nearbyPoints = getNearbyPoints();
+            std::vector<RobotMapPoint> nearbyPoints = getNearbyPoints();
             
             // Look at all nearby points
             for(RobotMapPoint point : nearbyPoints){
                 // Compare normals to see if they are similar
-                if(point._angle > pc._angle - _voteErrorAngle &&
-                   point._angle > pc._angle + _voteErrorAngle){
+                if(point.getAngle() > pc._angle - _voteAngleError &&
+                   point.getAngle() > pc._angle + _voteAngleError){
                     // Add the vector to the map point to find position
                     point += pc;
                     
                     // Calculate discrete location in grid
                     VoteLocation vl;
                     vl._x = std::floor(point.getX() * _voteScale);
-                    vl._y = std::floor(poin.getY() * _voteScale);
-                    vl._angleIndex = i;
+                    vl._y = std::floor(point.getY() * _voteScale);
+                    vl._delta = i;
                     
                     // Add a vote to this location
                     votes[vl] += 1;
@@ -167,9 +177,9 @@ RobotMapPoint RobotMap::feasiblePose(const vector<PolarCoordinates> & data){
     }
     
     // Estimate position from vote location
-    double x = (bestLocations.back()._x + 0.5) * (1 / _scale));
-    double y = (bestLocations.back()._y + 0.5) * (1 / _scale));
-    Angle orientation = initAngle + (0.5 + bestLocations.back()._angleIndex) * (pi() / _angleDivisions);
+    double x = (bestLocations.back()._x + 0.5) * (1 / _voteScale);
+    double y = (bestLocations.back()._y + 0.5) * (1 / _voteScale);
+    Angle orientation = initAngle + (0.5 + bestLocations.back()._delta) * (pi() / _angleDivisions);
     
     // Return the most probable robot location
     return RobotMapPoint(x, y, orientation);
