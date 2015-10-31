@@ -15,7 +15,7 @@ using std::cout;
 using std::cin;
 
 int main(){
-    WebSimServer s(9999);
+	WebSimServer s(9999);
     s.start();
     
     while(1){
