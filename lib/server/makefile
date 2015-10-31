@@ -1,5 +1,5 @@
 # Specify compiler
-COMP = g++ -lssl -lcrypto -std=c++1y -O2
+COMP = g++ -lssl -lcrypto -std=c++1y -O2 -Wall -Wno-unused-result
 
 # Specify target
 all: web_sim_test

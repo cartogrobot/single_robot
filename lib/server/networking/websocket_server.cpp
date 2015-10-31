@@ -30,7 +30,7 @@ const std::string WebSocketConnection::_magicString = "258EAFA5-E914-47DA-95CA-C
 
 // Constructor, does any initializations necessary then calls parent constructor
 WebSocketConnection::WebSocketConnection(int socket, Server * server, const sockaddr & toAddress):
-  _handshake(false), TCPConnection(socket, server, toAddress) {}                                   
+  TCPConnection(socket, server, toAddress), _handshake(false) {}                                   
  
 // Send message via websocket protocol
 bool WebSocketConnection::sendMessage(const std::string & message, bool binary){
@@ -81,9 +81,6 @@ bool WebSocketConnection::sendMessage(const std::string & message, bool binary){
 void WebSocketConnection::loop(){
     //std::cout << "WEBSOCKET LOOP\n";
     const char *term=" \t\r\n";
-    
-    // State of message reception
-    int state = 0;
     
     // Frame info
     bool fin = false;
@@ -202,7 +199,7 @@ void WebSocketConnection::loop(){
             if(mask){
                 // Treat maskData int as character array for masking
                 char * maskArray = (char *)(&maskData);
-                for(int i=0; i<payloadLength; i++){
+                for(std::size_t i=0; i<payloadLength; i++){
                     recieved[i] = recieved[i] ^ maskArray[i%4];
                 }
             }
@@ -282,7 +279,7 @@ bool WebSocketConnection::parseHandshake(const std::vector<std::string> & buffer
     // Read request and organize by attribute name
     std::map<std::string, std::vector<std::string>> attributes;
     std::string header = "";
-    for(int i=3; i<buffer.size(); i++){
+    for(std::size_t i=3; i<buffer.size(); i++){
         if(buffer[i].back() == ':'){
             // Remove ':' from end and store key
             header = buffer[i].substr(0,buffer[i].size()-1);

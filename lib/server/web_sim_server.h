@@ -34,7 +34,7 @@ protected:
     virtual void onMessage(const std::string & message);
     
     // Stores map coordinates for this session
-    //RobotMap _robotMap;
+    Angle _robotMap;
 };
 
 #endif

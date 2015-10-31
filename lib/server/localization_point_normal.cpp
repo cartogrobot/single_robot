@@ -80,10 +80,15 @@ bool operator==(const VoteLocation & v1, const VoteLocation & v2){
  * World map of RobotMapPoints organized into grid sectors via a unordered_map
 */
 
+// Default constructor, constructs with 1, 1, 3.14, 16
+RobotMap::RobotMap(): _hashScale(1.0), _voteScale(1.0), _voteAngleError(3.14),
+    _angleDivisions(16) {}
+
 // Constructs map with the given scale
-RobotMap::RobotMap(double hashScale, double voteScale, double voteAngleError, int angleDivisions):
-    _hashScale(hashScale), _voteScale(voteScale), _voteAngleError(voteAngleError), _angleDivisions(angleDivisions) {}
-    
+RobotMap::RobotMap(double hashScale, double voteScale, const Angle & voteAngleError,
+    std::size_t angleDivisions): _hashScale(hashScale), _voteScale(voteScale),
+    _voteAngleError(voteAngleError), _angleDivisions(angleDivisions) {}
+
 // Adds a RobotMapPoint to the map and places it in the corresponding grid sector
 void RobotMap::addPoint(const RobotMapPoint & p){
     int x = std::floor(p.getX() * _hashScale);
@@ -93,7 +98,7 @@ void RobotMap::addPoint(const RobotMapPoint & p){
 }
 
 // Retrieves map points nearby the robot location
-std::vector<RobotMapPoint> RobotMap::getNearbyPoints(int range){
+std::vector<RobotMapPoint> RobotMap::getNearbyPoints(std::size_t range){
     // Find discrete location of the robot
     int x = std::floor(_location.getX() * _hashScale);
     int y = std::floor(_location.getY() * _hashScale);
@@ -102,8 +107,8 @@ std::vector<RobotMapPoint> RobotMap::getNearbyPoints(int range){
     std::vector<RobotMapPoint> nearbyPoints;
     
     // Find all points in the current or adjacent locations
-    for(int i=(-1)*range; i<=range; i++){
-        for(int j=(-1)*range; j<=range; j++){
+    for(std::size_t i=(-1)*range; i<=range; i++){
+        for(std::size_t j=(-1)*range; j<=range; j++){
             std::pair<int,int> pos(x+i,y+j);
             if(_grid.count(pos) != 0){
                 for(const RobotMapPoint & point : _grid[pos]){
@@ -130,7 +135,7 @@ RobotMapPoint RobotMap::feasiblePose(const std::vector<PolarCoordinates> & data)
     // Start angle 90 degrees back from last known angle
     Angle initAngle = _location.getAngle() - pi()/2;
     
-    for(int i=0; i<_angleDivisions; i++){
+    for(std::size_t i=0; i<_angleDivisions; i++){
         // Increment test angle
         Angle testAngle(initAngle + (pi() / _angleDivisions) * i);
         

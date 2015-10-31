@@ -78,19 +78,22 @@ bool operator==(const VoteLocation & v1, const VoteLocation & v2);
 
 struct votehash {
 public:
-  std::size_t operator()(const VoteLocation &x) const
-  {
-    return std::hash<int>()(x._x) ^ std::hash<int>()(x._y) ^ std::hash<int>()(x._delta);
-  }
+    std::size_t operator()(const VoteLocation &x) const
+    {
+        return std::hash<int>()(x._x) ^ std::hash<int>()(x._y) ^ std::hash<int>()(x._delta);
+    }
 };
 
 
 // World map of RobotMapPoints organized into grid sectors via a unordered_map
 class RobotMap {
 public:
+	// Default constructor, constructs with 1, 1, 3.14, 16
+	RobotMap();
+	
     // Constructs map with the given scale
-    RobotMap(double hashScale = 1.0, double voteScale = 1.0,
-             double voteErrorAngle = 2.0, int angleDivisions = 16);
+    RobotMap(double hashScale, double voteScale,
+             const Angle & voteErrorAngle, std::size_t angleDivisions);
     
     // Adds a RobotMapPoint to the map and places it in the corresponding grid sector
     void addPoint(const RobotMapPoint & p);
@@ -100,7 +103,7 @@ public:
     
 private:
     // Retrieves map points nearby the robot location
-    std::vector<RobotMapPoint> getNearbyPoints(int range = 1);
+    std::vector<RobotMapPoint> getNearbyPoints(std::size_t range = 1);
 
     // Hash map that sorts points into bins by general location
     std::unordered_map<std::pair<int,int>, std::vector<RobotMapPoint>, pairhash> _grid;
@@ -108,14 +111,14 @@ private:
     // Scaling factor for hash grid sectors
     double _hashScale;
     
-    // Amount to vary angles
-    int _angleDivisions;
-    
     // Scaling factor for voting grid sectors
     double _voteScale;
     
     // Error allowed between normals
     double _voteAngleError;
+    
+    // Amount to vary angles
+    std::size_t _angleDivisions;
     
     // Robot location
     RobotMapPoint _location;
