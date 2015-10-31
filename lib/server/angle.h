@@ -7,6 +7,9 @@
  * Simple angle class
 */
 
+#ifndef __ANGLE_H
+#define __ANGLE_H
+
 #include<cmath>
 
 constexpr double pi() { return std::atan(-1); }
@@ -32,3 +35,5 @@ private:
 
     double _angle;
 };
+
+#endif
