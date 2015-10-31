@@ -133,15 +133,15 @@ RobotMapPoint RobotMap::feasiblePose(const std::vector<PolarCoordinates> & data)
     std::queue<VoteLocation> bestLocations;
     
     // Start angle 90 degrees back from last known angle
-    Angle initAngle = _location.getAngle() - pi()/2;
+    Angle initAngle = _location.getAngle() - M_PI/2;
     
     for(std::size_t i=0; i<_angleDivisions; i++){
         // Increment test angle
-        Angle testAngle(initAngle + (pi() / _angleDivisions) * i);
+        Angle testAngle(initAngle + (M_PI / _angleDivisions) * i);
         
         for(PolarCoordinates pc : data){
             // Add pi to invert the vector and add the current angle offset
-            pc._angle += testAngle + pi();
+            pc._angle += testAngle + M_PI;
             
             // Retrieve map points nearby the robots location
             std::vector<RobotMapPoint> nearbyPoints = getNearbyPoints();
@@ -184,7 +184,7 @@ RobotMapPoint RobotMap::feasiblePose(const std::vector<PolarCoordinates> & data)
     // Estimate position from vote location
     double x = (bestLocations.back()._x + 0.5) * (1 / _voteScale);
     double y = (bestLocations.back()._y + 0.5) * (1 / _voteScale);
-    Angle orientation = initAngle + (0.5 + bestLocations.back()._delta) * (pi() / _angleDivisions);
+    Angle orientation = initAngle + (0.5 + bestLocations.back()._delta) * (M_PI / _angleDivisions);
     
     // Return the most probable robot location
     return RobotMapPoint(x, y, orientation);

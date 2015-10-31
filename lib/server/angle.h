@@ -7,13 +7,14 @@
  * Simple angle class
 */
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846 /* pi */
+#endif
+
 #ifndef __ANGLE_H
 #define __ANGLE_H
 
 #include<cmath>
-
-constexpr double pi() { return std::atan(-1); }
-constexpr double pi2() { return std::atan(-1) * 2; }
 
 // Stores an angle in radians between 0 and 2pi
 class Angle {

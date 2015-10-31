@@ -12,18 +12,18 @@
 Angle::Angle(): _angle(0.0) {}
 
 Angle::Angle(double angle): _angle(angle) {
-    while(_angle >= pi2()){
-        _angle -= pi2();
+    while(_angle >= 2*M_PI){
+        _angle -= 2*M_PI;
     }
     while(_angle < 0){
-        _angle += pi2();
+        _angle += 2*M_PI;
     }
 }
 
 Angle & Angle::operator+=(const Angle & other){
     _angle += other._angle;
-    if(_angle >= pi2()){
-        _angle -= pi2();
+    if(_angle >= 2*M_PI){
+        _angle -= 2*M_PI;
     }
     return *this;
 }
@@ -31,7 +31,7 @@ Angle & Angle::operator+=(const Angle & other){
 Angle & Angle::operator-=(const Angle & other){
     _angle -= other._angle;
     if(_angle < 0){
-        _angle += pi2();
+        _angle += 2*M_PI;
     }
     return *this;
 }
@@ -39,10 +39,10 @@ Angle & Angle::operator-=(const Angle & other){
 Angle & Angle::operator*=(const Angle & other){
     _angle *= other._angle;
     while(_angle > 0){
-        _angle -= pi2();
+        _angle -= 2*M_PI;
     }
     while(_angle < 0){
-        _angle += pi2();
+        _angle += 2*M_PI;
     }
     return *this;
 }
@@ -50,10 +50,10 @@ Angle & Angle::operator*=(const Angle & other){
 Angle & Angle::operator/=(const Angle & other){
     _angle /= other._angle;
     while(_angle > 0){
-        _angle -= pi2();
+        _angle -= 2*M_PI;
     }
     while(_angle < 0){
-        _angle += pi2();
+        _angle += 2*M_PI;
     }
     return *this;
 }
