@@ -15,7 +15,11 @@
  * Stores a point as cartesian coordinates and a normal vector as angle
 */
 
+// Defualt ctor
 RobotMapPoint::RobotMapPoint(): _x(0.0), _y(0.0), _angle(0.0) {}
+
+// Copy ctor
+RobotMapPoint::RobotMapPoint(const RobotMapPoint & other):_x(other._x), _y(other._x), _angle(other._x) {}
 
 // Constructs MapPoint with the given parameters
 RobotMapPoint::RobotMapPoint(double x, double y, const Angle & angle): _x(x), _y(y), _angle(angle) {}
@@ -45,6 +49,7 @@ RobotMapPoint::RobotMapPoint(const PolarCoordinates & polarCoords, const RobotMa
 RobotMapPoint & RobotMapPoint::operator+=(const RobotMapPoint & other){
     this->_x += other._x;
     this->_y += other._y;
+    this->_angle += other._angle;
     
     return *this;
 }
