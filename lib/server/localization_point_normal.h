@@ -39,9 +39,6 @@ public:
     // Defualt ctor
     RobotMapPoint();
     
-    // Copy ctor
-    RobotMapPoint(const RobotMapPoint & other);
-    
     // Constructs MapPoint with the given parameters
     RobotMapPoint(double x, double y, const Angle & angle);
     
